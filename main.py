@@ -14,6 +14,9 @@ pygame.display.set_caption("Platformer")
 clock = pygame.time.Clock()
 FPS = 60
 
+#game variables (how fast the player falls down):
+GRAVITY = 1
+
 #defining color scheme:
 WHITE = (255, 255, 255)
 
@@ -36,6 +39,7 @@ class Player():
         self.rectangle = pygame.Rect(0, 0, self.width, self.height) #the rectangle will be used to sense collision
         self.rectangle.center = (x, y)
         
+        self.velocity_y = 0
         self.flip = False
     
     def move(self):
@@ -45,19 +49,29 @@ class Player():
         
         #process keypresses
         key = pygame.key.get_pressed()
-        if key[pygame.K_a]:
+        if key[pygame.K_LEFT]:
             dx = -10
             self.flip = True
-        if key[pygame.K_d]:
+        if key[pygame.K_RIGHT]:
             dx = 10
             self.flip = False
             
+        #gravity
+        self.velocity_y += GRAVITY
+        dy += self.velocity_y
+        
         #ensure player does not go off edge of screen
         if self.rectangle.left + dx < 0:
             dx = -self.rectangle.left
         if self.rectangle.right + dx > SCREEN_WIDTH:
-            dx = SCREEN_WIDTH - self.rectangle.width  
+            dx = SCREEN_WIDTH - self.rectangle.right  
         
+        
+        #check collision with ground
+        if self.rectangle.bottom + dy > SCREEN_HEIGHT:
+            dy = 0
+            self.velocity_y = -20 # how hard the player bounces off the ground
+            
         
         #update rectangle position
         self.rectangle.x += dx
