@@ -10,9 +10,12 @@ SCREEN_HEIGHT = 600
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Platformer")
 
-#defining color scheme:
-WHITE = (255,255,255)
+#set frame rate
+clock = pygame.time.Clock()
+FPS = 60
 
+#defining color scheme:
+WHITE = (255, 255, 255)
 
 
 
@@ -33,8 +36,35 @@ class Player():
         self.rectangle = pygame.Rect(0, 0, self.width, self.height) #the rectangle will be used to sense collision
         self.rectangle.center = (x, y)
         
+        self.flip = False
+    
+    def move(self):
+        #reset variables
+        dx = 0
+        dy = 0
+        
+        #process keypresses
+        key = pygame.key.get_pressed()
+        if key[pygame.K_a]:
+            dx = -10
+            self.flip = True
+        if key[pygame.K_d]:
+            dx = 10
+            self.flip = False
+            
+        #ensure player does not go off edge of screen
+        if self.rectangle.left + dx < 0:
+            dx = -self.rectangle.left
+        if self.rectangle.right + dx > SCREEN_WIDTH:
+            dx = SCREEN_WIDTH - self.rectangle.width  
+        
+        
+        #update rectangle position
+        self.rectangle.x += dx
+        self.rectangle.y += dy
+        
     def draw(self):
-        screen.blit(self.image, ( self.rectangle.x - 12, self.rectangle.y - 5 ))
+        screen.blit( pygame.transform.flip(self.image, self.flip, False ), ( self.rectangle.x - 12, self.rectangle.y - 5 ))
         pygame.draw.rect(screen, WHITE, self.rectangle, 2 )
 
 
@@ -45,6 +75,9 @@ player = Player(SCREEN_WIDTH // 2 , SCREEN_HEIGHT - 150 )
 #without a loop the game screen wont stay on because the code is executed line by line and after the creation of the window the code ends and so does the program
 run = True
 while run:
+    clock.tick(FPS)
+    player.move()
+    
     #make background appear at a certain position
     screen.blit(bg_image, (0,0))
     
