@@ -1,4 +1,5 @@
 import pygame
+import random
 
 pygame.init()
 
@@ -16,15 +17,16 @@ FPS = 60
 
 #game variables (how fast the player falls down):
 GRAVITY = 1
+MAX_PLATFORMS = 10
 
 #defining color scheme:
 WHITE = (255, 255, 255)
 
 
 
-
 #loading game images:
 player_sprite = pygame.image.load('assets/cat.png').convert_alpha()
+platform_sprite = pygame.image.load('assets/platform.png').convert_alpha()
 bg_image = pygame.image.load("assets/background.jpg").convert_alpha()
 
 
@@ -67,6 +69,20 @@ class Player():
             dx = SCREEN_WIDTH - self.rectangle.right  
         
         
+        #check collision with platforms
+        for platform in platform_group:
+            #y direction
+            if platform.rect.colliderect(self.rectangle.x, self.rectangle.y + dy, self.width, self.height):
+            #check if the player has a platform above it
+                if self.rectangle.bottom < platform.rect.centery:
+                    if self.velocity_y > 0:
+                        self.rectangle.bottom = platform.rect.top
+                        dy = 0
+                        self.velocity_y = -20
+                    
+
+        
+        
         #check collision with ground
         if self.rectangle.bottom + dy > SCREEN_HEIGHT:
             dy = 0
@@ -82,7 +98,29 @@ class Player():
         pygame.draw.rect(screen, WHITE, self.rectangle, 2 )
 
 
+class Platform(pygame.sprite.Sprite):
+    def __init__(self, x, y, width):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.transform.scale(platform_sprite, (width, 10) )
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
+
+
+#instances:
 player = Player(SCREEN_WIDTH // 2 , SCREEN_HEIGHT - 150 )
+
+#temporary platforms
+platform_group = pygame.sprite.Group()
+
+for p in range(MAX_PLATFORMS):
+    platform_width = random.randint(40, 60)
+    platform_x = random.randint(0, SCREEN_WIDTH - platform_width)
+    platform_y = p * random.randint(80, 120)
+
+    platform = Platform(platform_x, platform_y, platform_width)
+    platform_group.add(platform)
 
 
 
@@ -96,6 +134,7 @@ while run:
     screen.blit(bg_image, (0,0))
     
     #draw sprites:
+    platform_group.draw(screen)
     player.draw()
     
     
