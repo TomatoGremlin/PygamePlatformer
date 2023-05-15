@@ -16,6 +16,9 @@ clock = pygame.time.Clock()
 FPS = 60
 
 #game variables (how fast the player falls down):
+SCROLL_THRESHOLD = 200
+scroll = 0
+background_scroll = 0
 GRAVITY = 1
 MAX_PLATFORMS = 10
 
@@ -28,6 +31,20 @@ WHITE = (255, 255, 255)
 player_sprite = pygame.image.load('assets/cat.png').convert_alpha()
 platform_sprite = pygame.image.load('assets/platform.png').convert_alpha()
 bg_image = pygame.image.load("assets/background.jpg").convert_alpha()
+
+# to draw infinite scrolling background
+def draw_background (background_scroll):
+    #make background appear at a certain position
+    screen.blit(bg_image, (0, 0 + background_scroll))
+    screen.blit(bg_image, (0, -600 + background_scroll))
+
+
+    
+
+
+
+
+
 
 
 # class for the player:
@@ -46,6 +63,7 @@ class Player():
     
     def move(self):
         #reset variables
+        scroll = 0
         dx = 0
         dy = 0
         
@@ -82,16 +100,22 @@ class Player():
                     
 
         
-        
         #check collision with ground
         if self.rectangle.bottom + dy > SCREEN_HEIGHT:
             dy = 0
             self.velocity_y = -20 # how hard the player bounces off the ground
-            
+           
+        #check if player has reached the top of the screen
+        if self.rectangle.top <= SCREEN_HEIGHT:
+            #only scroll if player is going up
+            if self.velocity_y < 0:
+                scroll = -dy    
         
         #update rectangle position
         self.rectangle.x += dx
-        self.rectangle.y += dy
+        self.rectangle.y += dy + scroll
+        
+        return scroll
         
     def draw(self):
         screen.blit( pygame.transform.flip(self.image, self.flip, False ), ( self.rectangle.x - 12, self.rectangle.y - 5 ))
@@ -105,6 +129,10 @@ class Platform(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
+    
+    def update(self, scroll):
+        #update platform's vertical position
+        self.rect += scroll
 
 
 
@@ -128,14 +156,23 @@ for p in range(MAX_PLATFORMS):
 run = True
 while run:
     clock.tick(FPS)
-    player.move()
+    scroll = player.move()
     
-    #make background appear at a certain position
-    screen.blit(bg_image, (0,0))
+    #we have to draw infinite scrolling backgroud otherwise we will reach the end of it at some point
+    background_scroll += scroll
+    if background_scroll >= 600:
+        background_scroll = 0
+    draw_background (background_scroll)
     
     #draw sprites:
     platform_group.draw(screen)
     player.draw()
+    
+    #draw temporary scroll threshold
+    pygame.draw.line(screen, WHITE, (0, SCROLL_THRESHOLD), (SCREEN_WIDTH, SCROLL_THRESHOLD))
+    
+    #update platforms
+    platform_group.update(scroll)
     
     
     #event handler - click 'X' to close game window
