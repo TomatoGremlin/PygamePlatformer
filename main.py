@@ -16,14 +16,26 @@ clock = pygame.time.Clock()
 FPS = 60
 
 #game variables (how fast the player falls down):
+GRAVITY = 1
+MAX_PLATFORMS = 10
 SCROLL_THRESHOLD = 200
 scroll = 0
 background_scroll = 0
-GRAVITY = 1
-MAX_PLATFORMS = 10
+game_over = False
+score = 0
 
 #defining color scheme:
 WHITE = (255, 255, 255)
+#Font
+font_small = pygame.font.SysFont('Lucida Sans', 20)
+font_big = pygame.font.SysFont('Lucida Sans', 24)
+
+#function for outputting text to screen
+def draw_text(text, font, text_color, x, y):
+    img = font.render(text, True, text_color)
+    screen.blit(img, (x,y))
+
+
 
 
 #loading game images:
@@ -37,8 +49,6 @@ def draw_background (background_scroll):
     screen.blit(bg_image, (0, 0 + background_scroll))
     screen.blit(bg_image, (0, -600 + background_scroll))
 
-
-    
 
 
 # class for the player:
@@ -92,13 +102,7 @@ class Player():
                         dy = 0
                         self.velocity_y = -20
                     
-
-        
-        #check collision with ground
-        if self.rectangle.bottom + dy > SCREEN_HEIGHT:
-            dy = 0
-            self.velocity_y = -20 # how hard the player bounces off the ground
-           
+ 
         #check if player has reached the top of the screen
         if self.rectangle.top <= SCROLL_THRESHOLD:
             #only scroll if player is jumping up
@@ -144,47 +148,72 @@ platform_group = pygame.sprite.Group()
 platform = Platform(SCREEN_WIDTH // 2 - 50 , SCREEN_HEIGHT - 50, 100)
 platform_group.add(platform)
 
-
-
 #without a loop the game screen wont stay on because the code is executed line by line and after the creation of the window the code ends and so does the program
 run = True
 while run:
     clock.tick(FPS)
-    scroll = player.move()
-    
-    #draw infinite scrolling backgroud otherwise we will reach the end of it at some point
-    background_scroll += scroll
-    if background_scroll >= 600:
-        background_scroll = 0
-    draw_background (background_scroll)
-    
-    
-    #generate platforms
-    if len(platform_group) < MAX_PLATFORMS:
-        platform_width = random.randint(40, 60)
-        platform_x = random.randint(0, SCREEN_WIDTH - platform_width)
-        platform_y = platform.rect.y - random.randint(80, 120)
+    if game_over == False: 
+        scroll = player.move()
         
-        platform = Platform(platform_x, platform_y, platform_width)
-        platform_group.add(platform)
+        #draw infinite scrolling backgroud otherwise we will reach the end of it at some point
+        background_scroll += scroll
+        if background_scroll >= 600:
+            background_scroll = 0
+        draw_background (background_scroll)
+        
+        
+        #generate platforms
+        if len(platform_group) < MAX_PLATFORMS:
+            platform_width = random.randint(40, 60)
+            platform_x = random.randint(0, SCREEN_WIDTH - platform_width)
+            platform_y = platform.rect.y - random.randint(80, 120)
+            
+            platform = Platform(platform_x, platform_y, platform_width)
+            platform_group.add(platform)
+        
+        
+        #update platforms
+        platform_group.update(scroll)
+        
+        #draw sprites:
+        platform_group.draw(screen)
+        player.draw()
+        
+        #draw temporary scroll threshold
+        #pygame.draw.line(screen, WHITE, (0, SCROLL_THRESHOLD), (SCREEN_WIDTH, SCROLL_THRESHOLD))
+        
+        
+        #check for game over
+        if player.rectangle.top > SCREEN_HEIGHT:
+            game_over = True
     
     
-    #update platforms
-    platform_group.update(scroll)
-    
-    #draw sprites:
-    platform_group.draw(screen)
-    player.draw()
-    
-    #draw temporary scroll threshold
-    #pygame.draw.line(screen, WHITE, (0, SCROLL_THRESHOLD), (SCREEN_WIDTH, SCROLL_THRESHOLD))
-    
-    
+    else:
+        
+        draw_text('GAME OVER!', font_big, WHITE, 130, 200)
+        draw_text('SCORE: ' + str(score), font_big, WHITE, 130, 250)
+        draw_text('PRESS SPACE TO PLAY AGAIN', font_big, WHITE, 40, 300)
+        key = pygame.key.get_pressed()
+        if key[pygame.K_SPACE]:
+            #reset variables
+            game_over = False
+            score = 0
+            scroll = 0
+            
+            #reposition player
+            player.rectangle.center = (SCREEN_WIDTH // 2 , SCREEN_HEIGHT - 150 )
+            #reset platforms
+            platform_group.empty()
+            #create starting platform
+            platform = Platform(SCREEN_WIDTH // 2 - 50 , SCREEN_HEIGHT - 50, 100)
+            platform_group.add(platform)
+
+            
+          
     #event handler - click 'X' to close game window
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
-    
     
     #update display window
     pygame.display.update()
