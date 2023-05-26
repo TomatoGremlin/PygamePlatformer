@@ -26,11 +26,10 @@ MAX_PLATFORMS = 10
 WHITE = (255, 255, 255)
 
 
-
 #loading game images:
-player_sprite = pygame.image.load('assets/cat.png').convert_alpha()
-platform_sprite = pygame.image.load('assets/platform.png').convert_alpha()
-bg_image = pygame.image.load("assets/background.jpg").convert_alpha()
+player_sprite = pygame.image.load('Desktop/PygamePlatformer/assets/cat.png').convert_alpha()
+platform_sprite = pygame.image.load('Desktop/PygamePlatformer/assets/platform.png').convert_alpha()
+bg_image = pygame.image.load("Desktop/PygamePlatformer/assets/background.jpg").convert_alpha()
 
 # to draw infinite scrolling background
 def draw_background (background_scroll):
@@ -40,11 +39,6 @@ def draw_background (background_scroll):
 
 
     
-
-
-
-
-
 
 
 # class for the player:
@@ -106,8 +100,8 @@ class Player():
             self.velocity_y = -20 # how hard the player bounces off the ground
            
         #check if player has reached the top of the screen
-        if self.rectangle.top <= SCREEN_HEIGHT:
-            #only scroll if player is going up
+        if self.rectangle.top <= SCROLL_THRESHOLD:
+            #only scroll if player is jumping up
             if self.velocity_y < 0:
                 scroll = -dy    
         
@@ -132,7 +126,11 @@ class Platform(pygame.sprite.Sprite):
     
     def update(self, scroll):
         #update platform's vertical position
-        self.rect += scroll
+        self.rect.y += scroll
+        
+        #check if platform has gone off the screen and then delete it
+        if self.rect.top > SCREEN_HEIGHT:
+            self.kill()
 
 
 
@@ -142,13 +140,9 @@ player = Player(SCREEN_WIDTH // 2 , SCREEN_HEIGHT - 150 )
 #temporary platforms
 platform_group = pygame.sprite.Group()
 
-for p in range(MAX_PLATFORMS):
-    platform_width = random.randint(40, 60)
-    platform_x = random.randint(0, SCREEN_WIDTH - platform_width)
-    platform_y = p * random.randint(80, 120)
 
-    platform = Platform(platform_x, platform_y, platform_width)
-    platform_group.add(platform)
+platform = Platform(SCREEN_WIDTH // 2 - 50 , SCREEN_HEIGHT - 50, 100)
+platform_group.add(platform)
 
 
 
@@ -158,21 +152,32 @@ while run:
     clock.tick(FPS)
     scroll = player.move()
     
-    #we have to draw infinite scrolling backgroud otherwise we will reach the end of it at some point
+    #draw infinite scrolling backgroud otherwise we will reach the end of it at some point
     background_scroll += scroll
     if background_scroll >= 600:
         background_scroll = 0
     draw_background (background_scroll)
+    
+    
+    #generate platforms
+    if len(platform_group) < MAX_PLATFORMS:
+        platform_width = random.randint(40, 60)
+        platform_x = random.randint(0, SCREEN_WIDTH - platform_width)
+        platform_y = platform.rect.y - random.randint(80, 120)
+        
+        platform = Platform(platform_x, platform_y, platform_width)
+        platform_group.add(platform)
+    
+    
+    #update platforms
+    platform_group.update(scroll)
     
     #draw sprites:
     platform_group.draw(screen)
     player.draw()
     
     #draw temporary scroll threshold
-    pygame.draw.line(screen, WHITE, (0, SCROLL_THRESHOLD), (SCREEN_WIDTH, SCROLL_THRESHOLD))
-    
-    #update platforms
-    platform_group.update(scroll)
+    #pygame.draw.line(screen, WHITE, (0, SCROLL_THRESHOLD), (SCREEN_WIDTH, SCROLL_THRESHOLD))
     
     
     #event handler - click 'X' to close game window
