@@ -139,14 +139,30 @@ class Player():
 
 
 class Platform(pygame.sprite.Sprite):
-    def __init__(self, x, y, width):
+    def __init__(self, x, y, width, moving):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.transform.scale(platform_sprite, (width, 10) )
+        self.moving = moving
+        self.move_counter = random.randint(0, 50)
+        self.direction = random.choice([-1, 1])
+        self.speed = random.randint(1,2)
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
     
     def update(self, scroll):
+        #move side to side if the type is moving
+        if self.moving == True:
+            self.move_counter += 1
+            self.rect.x += self.direction * self.speed
+            
+            
+        #change platform direction if it has hit a wall
+        if self.move_counter >= 100 or self.rect.left < 0 or self.rect.right > SCREEN_WIDTH:
+            self.direction *= -1
+            self.move_counter = 0
+            
+        
         #update platform's vertical position
         self.rect.y += scroll
         
@@ -163,7 +179,7 @@ player = Player(SCREEN_WIDTH // 2 , SCREEN_HEIGHT - 150 )
 platform_group = pygame.sprite.Group()
 
 
-platform = Platform(SCREEN_WIDTH // 2 - 50 , SCREEN_HEIGHT - 50, 100)
+platform = Platform(SCREEN_WIDTH // 2 - 50 , SCREEN_HEIGHT - 50, 100, False)
 platform_group.add(platform)
 
 #without a loop the game screen wont stay on because the code is executed line by line and after the creation of the window the code ends and so does the program
@@ -187,7 +203,13 @@ while run:
             platform_x = random.randint(0, SCREEN_WIDTH - platform_width)
             platform_y = platform.rect.y - random.randint(80, 120)
             
-            platform = Platform(platform_x, platform_y, platform_width)
+            platform_type = random.randint(1, 2)
+            if platform_type == 1 and score > 500:
+                platform_moving = True
+            else:
+                platform_moving= False
+            
+            platform = Platform(platform_x, platform_y, platform_width, platform_moving)
             platform_group.add(platform)  
         #update platforms
         platform_group.update(scroll)
@@ -196,7 +218,7 @@ while run:
         if scroll > 0:
             score += scroll
         #draw line at previous highest score
-        pygame.draw.liene(screen, WHITE, (0, score - high_score + SCROLL_THRESHOLD), (SCREEN_WIDTH, score - high_score + SCROLL_THRESHOLD), 3 )
+        pygame.draw.line(screen, WHITE, (0, score - high_score + SCROLL_THRESHOLD), (SCREEN_WIDTH, score - high_score + SCROLL_THRESHOLD), 3 )
         draw_text('HIGHEST SCORE', font_small, WHITE, SCREEN_WIDTH - 130, score - high_score + SCROLL_THRESHOLD)
         
         #draw sprites:
@@ -240,7 +262,7 @@ while run:
                 #reset platforms
                 platform_group.empty()
                 #create starting platform
-                platform = Platform(SCREEN_WIDTH // 2 - 50 , SCREEN_HEIGHT - 50, 100)
+                platform = Platform(SCREEN_WIDTH // 2 - 50 , SCREEN_HEIGHT - 50, 100, False)
                 platform_group.add(platform)
 
                 
