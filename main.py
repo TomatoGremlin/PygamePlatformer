@@ -1,6 +1,8 @@
 import pygame
 import random
 import os
+from spritesheet import SpriteSheet
+from enemy import Enemy
 pygame.init()
 
 #setting game window size (in pixels) (constant variables):
@@ -51,7 +53,10 @@ def draw_text(text, font, text_color, x, y):
 #loading game images:
 player_sprite = pygame.image.load('assets/cat.png').convert_alpha()
 platform_sprite = pygame.image.load('assets/platform.png').convert_alpha()
-bg_image = pygame.image.load("assets/background.jpg").convert_alpha()
+bg_image = pygame.image.load('assets/background.jpg').convert_alpha()
+raven_sprites = pygame.image.load('assets/raven.png').convert_alpha()
+raven_sheet = SpriteSheet(raven_sprites)
+
 
 
 def draw_panel():
@@ -175,10 +180,11 @@ class Platform(pygame.sprite.Sprite):
 #instances:
 player = Player(SCREEN_WIDTH // 2 , SCREEN_HEIGHT - 150 )
 
-#temporary platforms
+#creasting sprite groups
 platform_group = pygame.sprite.Group()
+raven_group = pygame.sprite.Group()
 
-
+#starting platform - stationary
 platform = Platform(SCREEN_WIDTH // 2 - 50 , SCREEN_HEIGHT - 50, 100, False)
 platform_group.add(platform)
 
@@ -214,6 +220,15 @@ while run:
         #update platforms
         platform_group.update(scroll)
         
+        
+        #generate enemies
+        if len(raven_group) == 0:
+            raven = Enemy(SCREEN_WIDTH, 100, raven_sheet, 1.5 )
+            raven_group.add(raven)
+        
+        #update enemies
+        raven_group.update(scroll, SCREEN_WIDTH)
+        
         #updating the score
         if scroll > 0:
             score += scroll
@@ -223,6 +238,7 @@ while run:
         
         #draw sprites:
         platform_group.draw(screen)
+        raven_group.draw(screen)
         player.draw()        
         #draw panel
         draw_panel()
@@ -259,6 +275,8 @@ while run:
                 
                 #reposition player
                 player.rectangle.center = (SCREEN_WIDTH // 2 , SCREEN_HEIGHT - 150 )
+                #reset enemies
+                raven_group.empty
                 #reset platforms
                 platform_group.empty()
                 #create starting platform
