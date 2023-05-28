@@ -1,25 +1,51 @@
 import pygame
+from pygame import mixer
 import random
 import os
 from spritesheet import SpriteSheet
 from enemy import Enemy
+mixer.init()
 pygame.init()
 
+#========================================== SETTINGS =====================================================
+
 #setting game window size (in pixels) (constant variables):
-SCREEN_WIDTH = 400
+SCREEN_WIDTH = 600
 SCREEN_HEIGHT = 600
+
 
 #create the game window
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Platformer")
 
+#defining color scheme:
+WHITE = (255, 255, 255)
+RED = (225, 137, 125)
+BLACK = (0, 0, 0)
+SCORE_PANEL_COLOR = (126, 108, 142)
+
+#Font
+font_small = pygame.font.SysFont('Lucida Sans', 14)
+font_big = pygame.font.SysFont('Lucida Sans', 20)
+
+#function for outputting text to screen
+def draw_text(text, font, text_color, x, y):
+    img = font.render(text, True, text_color)
+    screen.blit(img, (x,y))
+
 #set frame rate
 clock = pygame.time.Clock()
 FPS = 60
 
+#load music and sounds
+mixer.music.load('assets/music/')
+mixer.music.set_volume(0.5)
+mixer.music.play(-1, 0.0)
+jump_sound = mixer.Sound('assets/music/')
+
 #game variables (how fast the player falls down):
 GRAVITY = 1
-MAX_PLATFORMS = 10
+MAX_PLATFORMS = 40
 SCROLL_THRESHOLD = 200
 scroll = 0
 background_scroll = 0
@@ -27,40 +53,27 @@ game_over = False
 score = 0
 fade_counter = 0
 
+     
 if os.path.exists('score.txt'):
     with open('score.txt', 'r') as file:
         high_score = int(file.read())
 else:
     high_score = 0
 
-#defining color scheme:
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-PANEL_COLOR = (153, 217, 234)
 
-#Font
-font_small = pygame.font.SysFont('Lucida Sans', 20)
-font_big = pygame.font.SysFont('Lucida Sans', 24)
-
-#function for outputting text to screen
-def draw_text(text, font, text_color, x, y):
-    img = font.render(text, True, text_color)
-    screen.blit(img, (x,y))
-
-
-
+#======================================= INICIATING BACKGROUND STUFF ========================================================
 
 #loading game images:
 player_sprite = pygame.image.load('assets/cat.png').convert_alpha()
 platform_sprite = pygame.image.load('assets/platform.png').convert_alpha()
-bg_image = pygame.image.load('assets/background.jpg').convert_alpha()
+bg_image = pygame.image.load('assets/background.png').convert_alpha()
 raven_sprites = pygame.image.load('assets/raven.png').convert_alpha()
 raven_sheet = SpriteSheet(raven_sprites)
 
 
 
 def draw_panel():
-    pygame.draw.rect(screen, PANEL_COLOR, (0,0, SCREEN_WIDTH, 30) )
+    pygame.draw.rect(screen, SCORE_PANEL_COLOR, (0,0, SCREEN_WIDTH, 30) )
     pygame.draw.line(screen, WHITE, (0, 30), (SCREEN_WIDTH, 30), 2)
     draw_text('YOUR SCORE: ' + str(score), font_small, WHITE, 0, 0)
     
@@ -70,22 +83,26 @@ def draw_panel():
 def draw_background (background_scroll):
     #make background appear at a certain position
     screen.blit(bg_image, (0, 0 + background_scroll))
-    screen.blit(bg_image, (0, -600 + background_scroll))
+    screen.blit(bg_image, (0, -SCREEN_HEIGHT + background_scroll))
 
 
+#======================================== PLAYER =====================================================
 
-# class for the player:
 class Player():
     def __init__(self, x, y): #starting coordinates for the player
         self.image = pygame.transform.scale(player_sprite, (50, 50))
         self.width = 35
         self.height = 40
         
-        #self.rectangle = self.image.get_rect() ->the rectangle will be used to sense collision
-        self.rectangle = pygame.Rect(0, 0, self.width, self.height) #the rectangle will be used to sense collision
-        self.rectangle.center = (x, y)
+        self.rect = pygame.Rect(0, 0, self.width, self.height) #the rect will be used to sense collision
+        self.rect.center = (x, y)
         
-        self.velocity_y = 0
+        self.velocity_y = 0 #player speed y axis
+        self.velocity_x = 0 #player speed x axis
+        
+        #self.mask = None
+
+        
         self.flip = False
     
     def move(self):
@@ -96,52 +113,60 @@ class Player():
         
         #process keypresses
         key = pygame.key.get_pressed()
-        if key[pygame.K_LEFT]:
-            dx = -10
-            self.flip = True
         if key[pygame.K_RIGHT]:
             dx = 10
             self.flip = False
+        if key[pygame.K_LEFT]:
+            dx = -10
+            self.flip = True
+        if key[pygame.K_UP]:
+             #gravity
+            self.velocity_y += GRAVITY
+            dy += self.velocity_y
             
-        #gravity
-        self.velocity_y += GRAVITY
-        dy += self.velocity_y
-        
+            
+       
         #ensure player does not go off edge of screen
-        if self.rectangle.left + dx < 0:
-            dx = -self.rectangle.left
-        if self.rectangle.right + dx > SCREEN_WIDTH:
-            dx = SCREEN_WIDTH - self.rectangle.right  
+        if self.rect.left + dx < 0:
+            dx = -self.rect.left
+        if self.rect.right + dx > SCREEN_WIDTH:
+            dx = SCREEN_WIDTH - self.rect.right  
         
         
         #check collision with platforms
         for platform in platform_group:
             #y direction
-            if platform.rect.colliderect(self.rectangle.x, self.rectangle.y + dy, self.width, self.height):
+            if platform.rect.colliderect(self.rect.x, self.rect.y + dy, self.width, self.height):
             #check if the player has a platform above it
-                if self.rectangle.bottom < platform.rect.centery:
+                if self.rect.bottom < platform.rect.centery:
                     if self.velocity_y > 0:
-                        self.rectangle.bottom = platform.rect.top
+                        self.rect.bottom = platform.rect.top
                         dy = 0
                         self.velocity_y = -20
                     
  
         #check if player has reached the top of the screen
-        if self.rectangle.top <= SCROLL_THRESHOLD:
+        if self.rect.top <= SCROLL_THRESHOLD:
             #only scroll if player is jumping up
             if self.velocity_y < 0:
                 scroll = -dy    
         
-        #update rectangle position
-        self.rectangle.x += dx
-        self.rectangle.y += dy + scroll
+        #update rect position
+        self.rect.x += dx
+        self.rect.y += dy + scroll
+        
+        #update mask
+        self.mask = pygame.mask.from_surface(self.image)
         
         return scroll
         
     def draw(self):
-        screen.blit( pygame.transform.flip(self.image, self.flip, False ), ( self.rectangle.x - 12, self.rectangle.y - 5 ))
-        pygame.draw.rect(screen, WHITE, self.rectangle, 2 )
+        screen.blit( pygame.transform.flip(self.image, self.flip, False ), ( self.rect.x - 12, self.rect.y - 5 ))
+        #pygame.draw.rect(screen, WHITE, self.rect, 2 )
 
+
+
+#========================================== PLATFORM =====================================================
 
 class Platform(pygame.sprite.Sprite):
     def __init__(self, x, y, width, moving):
@@ -177,7 +202,8 @@ class Platform(pygame.sprite.Sprite):
 
 
 
-#instances:
+#========================================== CREATING INSTANCES OF THE CLASSES =====================================================
+
 player = Player(SCREEN_WIDTH // 2 , SCREEN_HEIGHT - 150 )
 
 #creasting sprite groups
@@ -188,6 +214,7 @@ raven_group = pygame.sprite.Group()
 platform = Platform(SCREEN_WIDTH // 2 - 50 , SCREEN_HEIGHT - 50, 100, False)
 platform_group.add(platform)
 
+#========================================== GAME LOOP =====================================================
 #without a loop the game screen wont stay on because the code is executed line by line and after the creation of the window the code ends and so does the program
 run = True
 while run:
@@ -198,14 +225,14 @@ while run:
         
         #draw infinite scrolling backgroud otherwise we will reach the end of it at some point
         background_scroll += scroll
-        if background_scroll >= 600:
+        if background_scroll >= SCREEN_HEIGHT:
             background_scroll = 0
         draw_background (background_scroll)
         
         
         #generate platforms
         if len(platform_group) < MAX_PLATFORMS:
-            platform_width = random.randint(40, 60)
+            platform_width = random.randint(40, 100)
             platform_x = random.randint(0, SCREEN_WIDTH - platform_width)
             platform_y = platform.rect.y - random.randint(80, 120)
             
@@ -232,22 +259,37 @@ while run:
         #updating the score
         if scroll > 0:
             score += scroll
+        
+        #========================================== DRAWING =====================================================
+
         #draw line at previous highest score
         pygame.draw.line(screen, WHITE, (0, score - high_score + SCROLL_THRESHOLD), (SCREEN_WIDTH, score - high_score + SCROLL_THRESHOLD), 3 )
-        draw_text('HIGHEST SCORE', font_small, WHITE, SCREEN_WIDTH - 130, score - high_score + SCROLL_THRESHOLD)
+        draw_text('HIGHEST SCORE', font_small, WHITE, SCREEN_WIDTH - 150, score - high_score + SCROLL_THRESHOLD)
         
         #draw sprites:
         platform_group.draw(screen)
         raven_group.draw(screen)
-        player.draw()        
+        player.draw()     
+           
+        '''draw enemy rect
+        for enemy in raven_group:
+            pygame.draw.rect(screen , WHITE, raven.rect, 2 )'''
+           
         #draw panel
         draw_panel()
         
+        #========================================== FALLING =====================================================
         #check for game over
-        if player.rectangle.top > SCREEN_HEIGHT:
+        if player.rect.top > SCREEN_HEIGHT:
             game_over = True
+        #check for collision with enemies
+        if pygame.sprite.spritecollide(player, raven_group, False):
+            if pygame.sprite.spritecollide(player, raven_group, False, pygame.sprite.collide_mask):
+                game_over = True
     
     
+    
+    #========================================== WHEN GAME OVER =====================================================
     else:
         
         if fade_counter < SCREEN_WIDTH:
@@ -256,9 +298,9 @@ while run:
                 pygame.draw.rect(screen, BLACK, (0, y * 100, fade_counter, SCREEN_HEIGHT / 6 ))
                 pygame.draw.rect(screen, BLACK, (SCREEN_WIDTH - fade_counter, (y+1)*100, SCREEN_WIDTH, SCREEN_HEIGHT/ 6 ))
         else:    
-            draw_text('GAME OVER!', font_big, WHITE, 130, 200)
-            draw_text('SCORE: ' + str(score), font_big, WHITE, 130, 250)
-            draw_text('PRESS SPACE TO PLAY AGAIN', font_big, WHITE, 40, 300)
+            draw_text('GAME OVER!', font_big, RED, 230, 200)
+            draw_text('SCORE: ' + str(score), font_big, RED, 250, 250)
+            draw_text('PRESS SPACE TO PLAY AGAIN', font_big, RED, 150, 300)
             #update highest score
             if score > high_score:
                 high_score = score
@@ -274,7 +316,7 @@ while run:
                 fade_counter = 0
                 
                 #reposition player
-                player.rectangle.center = (SCREEN_WIDTH // 2 , SCREEN_HEIGHT - 150 )
+                player.rect.center = (SCREEN_WIDTH // 2 , SCREEN_HEIGHT - 150 )
                 #reset enemies
                 raven_group.empty
                 #reset platforms
@@ -284,8 +326,8 @@ while run:
                 platform_group.add(platform)
 
                 
-          
-    #event handler - click 'X' to close game window
+#========================================== CREATING INSTANCES OF THE CLASSESEVENT HANDLER =====================================================
+    # click 'X' to close game window
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             #update highest score

@@ -36,7 +36,7 @@ class Enemy(pygame.sprite.Sprite):
     
     def update(self,scroll ,SCREEN_WIDTH):
         #update animation
-        ANIMATION_COOLDOWN = 50
+        ANIMATION_COOLDOWN = 70
         
         #update image depending on current frame
         self.image = self.animation_list[self.frame_index]

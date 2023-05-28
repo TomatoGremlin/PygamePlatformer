@@ -1,8 +1,5 @@
 import pygame
-SCREEN_WIDTH = 400
-SCREEN_HEIGHT = 600
-#loading game images:
-player_sprite = pygame.image.load('assets/cat.png').convert_alpha()
+from settings import SCREEN_HEIGHT, SCREEN_WIDTH, player_sprite
 
 
 # class for the player:

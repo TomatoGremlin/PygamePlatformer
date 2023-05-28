@@ -1,2 +1,1 @@
-SCREEN_WIDTH = 400
-SCREEN_HEIGHT = 600
+draw_text
